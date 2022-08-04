@@ -8,22 +8,36 @@
 <img src="img/hvb05.png" alt="hvb" width="420" />
 </p>
 
-#### Recommended
-- [Powershell](https://docs.microsoft.com/ru-ru/powershell/scripting/install/installing-powershell) 7.2 for [ANSI escape sequences](https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_ansi_terminals)
-- [xterm](https://en.wikipedia.org/wiki/Xterm)-based terminal
+### Features
 
-#### Tested on
+- Hyper-v backup (export):
+    - one Vm
+    - all Vms
+    - VMs from text file
+- Delete backups older than *N* days
+- E-mail notification
+- Show information about all VMs
+- Logging
+
+### Tested on
 
 - [Windows Server 2016](https://en.wikipedia.org/wiki/Windows_Server_2016)
 - [Powershell](https://docs.microsoft.com/ru-ru/powershell/scripting/install/installing-powershell) 7.2.5
 
-#### Preparation
+### Recommended
+- [Powershell](https://docs.microsoft.com/ru-ru/powershell/scripting/install/installing-powershell) 7.2 for [ANSI escape sequences](https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_ansi_terminals)
+- [xterm](https://en.wikipedia.org/wiki/Xterm)-based terminal
+
+### Preparation
 
 - Change this lines for e-mail notification:
 
 `$EmailFrom = 'example@example.com'`
+
 `$EmailPassword = 'SECRETPASSWORD!'`
+
 `$EmailSmtpServer = 'smtp.example.com'`
+
 `$EmailSmtpPort = 587`
 
 - Uncomment this line to use TLS not SSL for e-mail
