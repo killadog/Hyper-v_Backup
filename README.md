@@ -57,7 +57,7 @@
 |**-To** *Backup_folder*|Folder for backup||
 |**-DaysBack** *count*|Delete backups older than *N* days||
 |**-Email** *e-mail_Recipient*|E-mail recipient to send log||
-|**-LogDir** *Log_Folder*|Folder for logs|%Temp%|
+|**-LogDir** *Log_Folder*|Folder for log|%Temp%|
 |**-Info**|Show information about all VMs|False|
 |**-Log**|Save log file|False|
 |**-Help**|Help screen. *No options at all to have the same.*|False|
