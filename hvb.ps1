@@ -8,7 +8,7 @@ with Log file in folder 'C:\Logs'
 and delete backups older than 5 days
 and send e-mail with Log to example@example.com
 
-PS> .\hvb.ps1 -VmName vm_debian -To C:\Backup -LogDir C:\Logs -LogPrefix deb -DaysBack 5 -Email example@example.com
+PS> .\hvb.ps1 -VmName vm_debian -To C:\Backup -LogDir C:\Logs -Log -DaysBack 5 -Email example@example.com
 
 or simple
 
@@ -24,13 +24,16 @@ param ([parameter(Mandatory = $false)][switch] $Info ## Information about all VM
     , [parameter(Mandatory = $false)][string[]] $VmName ## One VM name for backup. (Use without -VmFile and -All)
     , [parameter(Mandatory = $false)][string[]] $VmFile ## File with VM names for backup. (Use without -VmName and -All)
     , [parameter(Mandatory = $false)][switch] $All ## Backup all VMs. (Use without -VmName and -VmFile)
-    , [parameter(Mandatory = $false)][string[]] $To ## Backup to folder
+    , [parameter(Mandatory = $false)][string[]] $To ## Folder for backup
     , [parameter(Mandatory = $false)][ValidateRange(1, 365)][int] $DaysBack ## Delete backups older than N days [1..365]
-    , [parameter(Mandatory = $false)][string[]] $Email ## Send e-mail with Log to recepient(s)
+    , [parameter(Mandatory = $false)][string[]] $Email ## Send e-mail with Log to recepient(s) (comma separated)
     , [parameter(Mandatory = $false)][string[]] $LogDir = $env:temp ## Log to folder (default is %TEMP%)
     , [parameter(Mandatory = $false)][switch] $Log ## Save Log
     , [parameter(Mandatory = $false)][switch] $Help ## This help screen
 )
+
+#(Get-History)[-1]
+#exit
 
 function help () {
     Get-Command -Syntax $PSCommandPath
@@ -49,27 +52,20 @@ function Format-FileSize() {
     ElseIf ($size -gt 1KB) { [string]::Format("{0:0.00} kB", $size / 1KB) }
     ElseIf ($size -gt 0) { [string]::Format("{0:0.00} B", $size) }
     Else { "" }
-
 }
 
 function Information {
     $VmList = @()
-    for ($i = 0; $i -le ($VMs.length - 1); $i++) {
-        $Exists = get-vm -name $VMs[$i] -ErrorAction SilentlyContinue
-        If ($Exists) {
-            $VmState = Get-VM -VMName $VMs[$i] | Select-Object -ExpandProperty State
-            $VmUptime = (Get-VM -VMName $VMs[$i] | Select-Object -ExpandProperty Uptime).ToString("dd\.hh\:mm\:ss")
-            $VmFileSize = Format-FileSize(Get-VM -VMName $VMs[$i] | Select-Object VMid | Get-VHD | Select-Object -ExpandProperty FileSize)
-            $VmPath = Get-VM -VMName $VMs[$i] | Select-Object VMid | Get-VHD | Select-Object -ExpandProperty Path
-            $VmVhdType = Get-VHD $VmPath | Select-Object -ExpandProperty VhdType
-            $VmNotes = Get-VM -VMName $VMs[$i] | Select-Object -ExpandProperty Notes
-        }
-        else {
-            $VmState = $VmUptime = $VmFileSize = $VmVhdType = $VmPath = $VmNotes = ''
-        }  
+    $Vms | ForEach-Object {
+        $VmState = Get-VM -VMName $_ | Select-Object -ExpandProperty State
+        $VmUptime = (Get-VM -VMName $_ | Select-Object -ExpandProperty Uptime).ToString("dd\.hh\:mm\:ss")
+        $VmFileSize = Format-FileSize(Get-VM -VMName $_ | Select-Object VMid | Get-VHD | Select-Object -ExpandProperty FileSize)
+        $VmPath = Get-VM -VMName $_ | Select-Object VMid | Get-VHD | Select-Object -ExpandProperty Path
+        $VmVhdType = Get-VHD $VmPath | Select-Object -ExpandProperty VhdType
+        $VmNotes = Get-VM -VMName $_ | Select-Object -ExpandProperty Notes
         $VmList += [PSCustomObject] @{
-            'Number'   = $i + 1
-            'VM name'  = $VMs[$i]
+            'Number'   = $i++ + 1
+            'VM name'  = $_
             'State'    = $VmState
             'Uptime'   = $VmUptime
             'Vhd type' = $VmVhdType
@@ -78,9 +74,10 @@ function Information {
             'Notes'    = $VmNotes
         }
     }
+
     $VmList | Format-Table -Property @{n = "Number"; e = { $_.Number }; a = "center" },
     @{n = "VM name"; e = { $($PSStyle.Foreground.BrightYellow) + $_.'VM name' }; a = "center" },
-    @{n = "State"; e = {if ($_.State -eq 'Running') { $($PSStyle.Foreground.BrightGreen) + $_.State } else { $($PSStyle.Foreground.BrightRed) + $_.State }  }; a = "center" },
+    @{n = "State"; e = { if ($_.State -eq 'Running') { $($PSStyle.Foreground.BrightGreen) + $_.State } else { $($PSStyle.Foreground.BrightRed) + $_.State } }; a = "center" },
     @{n = "Uptime"; e = { $_.Uptime }; a = "center" },
     @{n = "VHD type"; e = { $_.'Vhd type' }; a = "center" },
     @{n = "VHD size"; e = { $_.'VHD size' }; a = "center" },
@@ -88,10 +85,7 @@ function Information {
     @{n = "Notes"; e = { $_.Notes }; a = "left" }
 }
 
-$VersionMajor = $PSVersionTable.PSVersion.Major
-$VersionMinor = $PSVersionTable.PSVersion.Minor
-$Version = "$VersionMajor.$VersionMinor"
-if ([System.Version]"$Version" -lt [System.Version]"7.2") {
+if ([System.Version]"$($PSVersionTable.PSVersion.Major).$($PSVersionTable.PSVersion.Minor)" -lt [System.Version]"7.2") {
     $PSStyle.OutputRendering = 'PlainText'
 }
 else {
@@ -105,6 +99,7 @@ if ($Info) {
     Exit
 }
 
+#if ($Help -or (!$args.Count)) {
 if ($Help) {
     help
 }
@@ -143,8 +138,6 @@ $str = "$($PSStyle.Foreground.BrightYellow)-" * 70
 
 Start-Transcript -Append $LogFile -UseMinimalHeader 
 
-#(Get-History)[-1]
-
 if ($VmFile) {
     $VMs = @(Get-Content $VmFile | Where-Object { ($_.trim() -ne "") -and (!$_.StartsWith("#")) })
 }
@@ -156,7 +149,7 @@ if ($All) {
 }
 
 Write-Host $str
-Write-Host "VM(s) to backup:"
+Write-Host "VM(s) to backup:" -NoNewline
 
 Information
 
@@ -169,7 +162,7 @@ $TotalTime = Measure-Command {
     $VMs | ForEach-Object {
         $Counter++
         Write-Host $str
-        Write-Host "$_ [$Counter/$($VMs.Length)]"
+        Write-Host "VM '$_' [$Counter/$($VMs.Length)]"
 
         try {
             $Exists = get-vm -name $_ -ErrorAction Stop
@@ -181,7 +174,7 @@ $TotalTime = Measure-Command {
         If ($Exists) {
             $VmBackupDir = "$To\$_\${_}_$DateFormat"
             $BackupTime = Measure-Command {
-                Write-Host "`nCreate $VmBackupDir"
+                Write-Host "`nCreate folder '$VmBackupDir'"
                 New-Item -ItemType Directory $VmBackupDir -Force
                         
                 try {
@@ -200,12 +193,18 @@ $TotalTime = Measure-Command {
                     Remove-Item $To\$_\${_}_$DateFormat\$_ -Recurse -Force -Confirm:$false
 
                     If ($DaysBack) {
-                        Write-Host "`nDelete backups older than $DaysBack days. Folders to delete:"
-                        $DeleteFromDate = (Get-Date).AddDays(-$DaysBack)
-                        Get-ChildItem -Path $To\$_  | Where-Object { $_.CreationTime -le $DeleteFromDate } | Select-Object -ExpandProperty FullName | Out-Host
-                        Get-ChildItem -Path $To\$_ | Where-Object { $_.CreationTime -le $DeleteFromDate } | Remove-Item -Recurse -Force
+                        Write-Host "`nDelete backups older than $DaysBack days:"
+                        $DeleteFromDate = (Get-Date).AddMinutes(-$DaysBack)
+                        $FoldersToDelete = Get-ChildItem -Path $To\$_  | Where-Object { $_.CreationTime -le $DeleteFromDate } | Select-Object -ExpandProperty FullName 
+                        if ($FoldersToDelete) {
+                            Write-Host $FoldersToDelete -Separator "`n"
+                            Get-ChildItem -Path $To\$_ | Where-Object { $_.CreationTime -le $DeleteFromDate } | Remove-Item -Recurse -Force
+                        }
+                        else {
+                            Write-Host "Nothing to delete"
+                        }
                     }
-                    Write-Host "`nCurrent folders with backups in $To\$_"
+                    Write-Host "`nCurrent folders with backups in '$To\$_'"
                     Get-ChildItem -Path $To\$_ | Select-Object -ExpandProperty FullName | Out-Host
                     $Result = 'Success'
                 }
@@ -215,7 +214,7 @@ $TotalTime = Measure-Command {
             }
 
             $BackupTime = $BackupTime.ToString("hh\:mm\:ss")
-            Write-Host "`n$_ backup time: $BackupTime`n"
+            Write-Host "`nVM '$_' backup time: $BackupTime`n"
             $VmNotes = Get-VM -VMName $_ | Select-Object -ExpandProperty Notes
         }
         Else {
@@ -254,9 +253,10 @@ if ($Email) {
     $encoding = [System.Text.Encoding]::UTF8
     [System.Net.ServicePointManager]::SecurityProtocol = "Tls, TLS11, TLS12" # Uncomment it to use TLS not SSL
     Send-MailMessage -To $Email -Subject $EmailSubject -Body $body -SmtpServer $EmailSmtpServer -Credential $mycreds -Port $EmailSmtpPort -UseSsl -from $EmailFrom -Encoding $encoding -WarningAction:SilentlyContinue
-    Write-Host "`nSending e-mail to $Email`n"
+    Write-Host "`nSend e-mail to $Email`n"
 }
 
 if (!$Log) {
-    Remove-Item $LogFile -Verbose -Force
+    Write-Host "Delete '$LogFile'"
+    Remove-Item $LogFile -Force
 }

@@ -64,7 +64,7 @@
 
 ### Examples
 
-`PS> .\hvb.ps1 -VmName vm_debian -To C:\Backup -LogDir C:\Logs -DaysBack 5 -Email example@example.com`
+`PS> .\hvb.ps1 -VmName vm_debian -To C:\Backup -LogDir C:\Logs -Log -DaysBack 5 -Email example@example.com`
 
 or simple
 
