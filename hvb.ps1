@@ -194,7 +194,7 @@ $TotalTime = Measure-Command {
 
                     If ($DaysBack) {
                         Write-Host "`nDelete backups older than $DaysBack days:"
-                        $DeleteFromDate = (Get-Date).AddMinutes(-$DaysBack)
+                        $DeleteFromDate = (Get-Date).AddDays(-$DaysBack)
                         $FoldersToDelete = Get-ChildItem -Path $To\$_  | Where-Object { $_.CreationTime -le $DeleteFromDate } | Select-Object -ExpandProperty FullName 
                         if ($FoldersToDelete) {
                             Write-Host $FoldersToDelete -Separator "`n"
